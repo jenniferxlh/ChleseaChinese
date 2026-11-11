@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chelsea 的 P4 华文朗读训练营 🇸🇬</title>
+    <!-- 引入 Tesseract.js 用于本地拍照/图片文字识别 -->
+    <script src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js'></script>
+    <style>
+        :root {
+            --primary-color: #ff6b81;
+            --secondary-color: #ff4757;
+            --bg-color: #f8f9fa;
+            --card-bg: #ffffff;
+            --text-color: #2f3542;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 650px;
+            background: var(--card-bg);
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+        }
+
+        h2 {
+            text-align: center;
+            color: var(--primary-color);
+            margin-bottom: 5px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #747d8c;
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+
+        /* 上传图片区域 */
+        .upload-section {
+            border: 2px dashed #ced6e0;
+            padding: 15px;
+            border-radius: 12px;
+            text-align: center;
+            margin-bottom: 20px;
+            background: #f1f2f6;
+        }
+
+        .upload-section input[type="file"] {
+            display: none;
+        }
+
+        .upload-btn {
+            background-color: #2ed573;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 15px;
+            display: inline-block;
+            font-weight: bold;
+            transition: background 0.2s;
+        }
+        .upload-btn:hover { background-color: #26af5f; }
+
+        .article-box {
+            background: #fdf2f2;
+            padding: 20px;
+            border-radius: 12px;
+            font-size: 18px;
+            line-height: 1.8;
+            margin-bottom: 20px;
+            border-left: 5px solid var(--primary-color);
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        button {
+            flex: 1;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            color: white;
+        }
+
+        button:active { transform: scale(0.98); }
+
+        #btn-listen { background-color: #ffa502; }
+        #btn-listen:hover { background-color: #ff9f1a; }
+
+        #btn-record { background-color: var(--primary-color); }
+        #btn-record:hover { background-color: var(--secondary-color); }
+        #btn-record.recording {
+            background-color: #eb4d4b;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.6; }
+            100% { opacity: 1; }
+        }
+
+        .result-card {
+            background: #e4f8f0;
+            border: 1px solid #2ed573;
+            padding: 20px;
+            border-radius: 12px;
+            display: none;
+            margin-top: 20px;
+        }
+
+        .result-score {
+            font-size: 28px;
+            font-weight: bold;
+            color: #2ed573;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        .result-details {
+            font-size: 15px;
+            line-height: 1.5;
+        }
+
+        .status-tip {
+            text-align: center;
+            font-size: 14px;
+            color: #57606f;
+            margin-top: 10px;
+            min-height: 20px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>🇸🇬 Chelsea 的 P4 华文朗读训练</h2>
+    <div class="subtitle">拍照上传课文或练习册，随时随地针对性练习！</div>
+
+    <!-- 拍照/上传图片区域 -->
+    <div class="upload-section">
+        <p style="margin: 0 0 10px 0; font-size: 14px; color: #57606f;">第一步：拍照或上传 P4 华文文章图片</p>
+        <label class="upload-btn">
+            📷 选择照片 / 拍照上传
+            <input type="file" id="image-input" accept="image/*" onchange="handleImageUpload(event)">
+        </label>
+    </div>
+
+    <!-- 文章内容区域 -->
+    <div class="article-box" id="article-text">
+        马路如虎口，我们过马路时一定要注意安全，左右看，等车子停定后才走。
+    </div>
+
+    <!-- 操作按钮 -->
+    <div class="controls">
+        <button id="btn-listen" onclick="playAudio()">🔊 听范读</button>
+        <button id="btn-record" onclick="toggleRecord()">🎤 开始录音打分</button>
+    </div>
+
+    <div class="status-tip" id="status-tip">准备就绪，请上传文章或直接开始练习</div>
+
+    <!-- 评分结果展示 -->
+    <div class="result-card" id="result-card">
+        <div class="result-score" id="score-text">得分: 95分</div>
+        <div class="result-details" id="result-details"></div>
+    </div>
+</div>
+
+<script>
+    let currentText = "马路如虎口，我们过马路时一定要注意安全，左右看，等车子停定后才走。";
+    let recognition = null;
+    let isRecording = false;
+
+    // 初始化语音识别
+    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        recognition = new SpeechRecognition();
+        recognition.lang = 'zh-CN';
+        recognition.continuous = false;
+        recognition.interimResults = false;
+
+        recognition.onresult = function(event) {
+            const transcript = event.results[0][0].transcript;
+            evaluateReading(transcript);
+            stopRecordUI();
+        };
+
+        recognition.onerror = function(event) {
+            console.error(event.error);
+            document.getElementById('status-tip').innerText = "识别出错，请再试一次~";
+            stopRecordUI();
+        };
+
+        recognition.onend = function() {
+            if (isRecording) stopRecordUI();
+        };
+    }
+
+    // 处理图片上传与 OCR 识别
+    async function handleImageUpload(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const statusTip = document.getElementById('status-tip');
+        const articleBox = document.getElementById('article-text');
+        statusTip.innerText = "正在识别图片中的文字，请稍候...";
+
+        try {
+            const result = await Tesseract.recognize(
+                file,
+                'chi_sim',
+                { 
+                    logger: m => {
+                        if (m.status === 'recognizing text') {
+                            statusTip.innerText = `文字识别中... ${Math.round(m.progress * 100)}%`;
+                        }
+                    } 
+                }
+            );
+
+            let extractedText = result.data.text.trim().replace(/\s+/g, '');
+
+            if (extractedText.length > 2) {
+                currentText = extractedText;
+                articleBox.innerText = extractedText;
+                statusTip.innerText = "识别成功！Chelsea 可以点击“听范读”或“开始录音”啦！";
+            } else {
+                statusTip.innerText = "未能清晰识别文字，请上传更清晰的照片。";
+            }
+        } catch (error) {
+            console.error(error);
+            statusTip.innerText = "OCR 识别出错，请重试。";
+        }
+    }
+
+    // 播放范读
+    function playAudio() {
+        if ('speechSynthesis' in window) {
+            window.speechSynthesis.cancel();
+            const utterance = new SpeechSynthesisUtterance(currentText);
+            utterance.lang = 'zh-CN';
+            utterance.rate = 0.85;
+            document.getElementById('status-tip').innerText = "正在播放标准范读...";
+            window.speechSynthesis.speak(utterance);
+            
+            utterance.onend = function() {
+                document.getElementById('status-tip').innerText = "范读结束，轮到 Chelsea 朗读了！";
+            };
+        } else {
+            alert("您的浏览器不支持语音合成。");
+        }
+    }
+
+    // 切换录音
+    function toggleRecord() {
+        if (!recognition) {
+            alert("当前环境不支持语音识别，请使用 Google Chrome 或 Edge 浏览器体验打分功能。");
+            return;
+        }
+
+        if (!isRecording) {
+            try {
+                recognition.start();
+                isRecording = true;
+                const btn = document.getElementById('btn-record');
+                btn.innerText = "⏹️ 停止并打分";
+                btn.classList.add('recording');
+                document.getElementById('status-tip').innerText = "正在录音，请对着麦克风朗读文章...";
+                document.getElementById('result-card').style.display = 'none';
+            } catch (e) {
+                console.error(e);
+            }
+        } else {
+            recognition.stop();
+            stopRecordUI();
+        }
+    }
+
+    function stopRecordUI() {
+        isRecording = false;
+        const btn = document.getElementById('btn-record');
+        btn.innerText = "🎤 开始录音打分";
+        btn.classList.remove('recording');
+    }
+
+    // 评分与比对
+    function evaluateReading(userText) {
+        const cleanUser = userText.replace(/[^\u4e00-\u9fa5]/g, "");
+        const cleanTarget = currentText.replace(/[^\u4e00-\u9fa5]/g, "");
+
+        let matchCount = 0;
+        for (let i = 0; i < cleanUser.length; i++) {
+            if (cleanTarget.includes(cleanUser[i])) {
+                matchCount++;
+            }
+        }
+
+        let score = Math.round((matchCount / Math.max(cleanTarget.length, 1)) * 100);
+        if (score > 100) score = 100;
+        if (score < 40 && cleanUser.length > 0) score = 40;
+
+        const resultCard = document.getElementById('result-card');
+        document.getElementById('score-text').innerText = `🎉 Chelsea 得分: ${score} 分`;
+        document.getElementById('result-details').innerHTML = `
+            <b>你刚才读到的是：</b> "${userText}"<br>
+            <b>老师评语：</b> ${getComment(score)}
+        `;
+        resultCard.style.display = 'block';
+        document.getElementById('status-tip').innerText = "打分完成！随时可以换一张照片继续练习~";
+    }
+
+    function getComment(score) {
+        if (score >= 90) return "太棒了！发音非常标准，咬字清晰，继续保持！🌟";
+        if (score >= 75) return "读得很不错哦！个别字词可以再多练几遍。👍";
+        return "加油！多听几次标准范读，然后再挑战一次！💪";
+    }
+</script>
+
+</body>
+</html>
